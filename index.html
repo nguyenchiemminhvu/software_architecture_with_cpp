@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Software Architecture with C++</title>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+        :root {
+            --ink: #0f172a;
+            --subtle: #64748b;
+            --accent: #2563eb;
+            --accent-2: #0d9488;
+            --accent-warn: #d97706;
+            --bg: #f0f4ff;
+            --paper: #ffffff;
+            --shadow: rgba(15, 23, 42, 0.18);
+            --stroke: #dde3f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --scale: 1;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background: radial-gradient(circle at 10% 10%, #dbeafe 0%, transparent 42%),
+                        radial-gradient(circle at 88% 16%, #ccfbf1 0%, transparent 38%),
+                        linear-gradient(120deg, #eef2ff 0%, #f8fafc 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .deck {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+        }
+        .frame {
+            position: relative;
+            width: 1200px;
+            height: 720px;
+            background: var(--paper);
+            border-radius: 24px;
+            box-shadow: 0 30px 80px var(--shadow);
+            border: 1px solid var(--stroke);
+            overflow: hidden;
+            transform: scale(var(--scale));
+            transform-origin: center;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            padding: clamp(18px, 3vw, 36px);
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 12px;
+            opacity: 0;
+            transform: translateX(30px) scale(0.98);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            z-index: 2;
+        }
+        .slide-title {
+            font-family: "Fraunces", "Times New Roman", serif;
+            font-size: clamp(22px, 2.7vw, 38px);
+            letter-spacing: 0.2px;
+            color: var(--ink);
+        }
+        .slide-subtitle { color: var(--subtle); font-size: clamp(14px, 1.8vw, 20px); }
+        .content {
+            display: grid;
+            gap: 12px;
+            font-size: clamp(14px, 1.6vw, 19px);
+            line-height: 1.55;
+            overflow: hidden;
+        }
+        .content ul { margin-left: 20px; }
+        .content ul ul { margin-top: 4px; margin-left: 16px; list-style: circle; color: var(--subtle); font-size: 0.93em; }
+        .content li { margin-bottom: 6px; }
+        .content strong { color: var(--accent-2); }
+        .content em { color: var(--accent-warn); font-style: normal; font-weight: 600; }
+        .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+        .three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(37, 99, 235, 0.12);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .card { border: 1px solid var(--stroke); border-radius: 14px; padding: 14px 16px; background: #f8faff; }
+        .card h3 { margin-bottom: 6px; font-size: 15px; color: var(--accent-2); }
+        .card p, .card li { font-size: 0.9em; color: var(--subtle); }
+        .callout { border-radius: 14px; border: 1px solid #bfdbfe; background: #eff6ff; padding: 14px 16px; }
+        .callout h3 { margin-bottom: 6px; font-size: 15px; color: var(--accent); }
+        .callout p { font-size: 0.9em; color: var(--ink); }
+        .callout.secondary { border-color: #99f6e4; background: #f0fdf9; }
+        .callout.secondary h3 { color: var(--accent-2); }
+        .callout.warn { border-color: #fde68a; background: #fffbeb; }
+        .callout.warn h3 { color: var(--accent-warn); }
+        .stack { display: grid; gap: 12px; }
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+            font-size: clamp(10px, 1.1vw, 13px);
+            line-height: 1.6;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+        pre .kw  { color: #93c5fd; }
+        pre .ty  { color: #6ee7b7; }
+        pre .cm  { color: #64748b; }
+        pre .st  { color: #fca5a5; }
+        pre .nm  { color: #fcd34d; }
+        pre .ok  { color: #4ade80; }
+        pre .bad { color: #f87171; }
+        .code-label { font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--subtle); margin-bottom: 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: clamp(12px, 1.3vw, 15px); }
+        th, td { border: 1px solid var(--stroke); padding: 8px 10px; text-align: left; }
+        th { background: #f0f4ff; font-weight: 700; color: var(--accent); }
+        td strong { color: var(--accent-2); }
+        .agenda-list { display: grid; gap: 8px; }
+        .agenda-item {
+            padding: 13px 16px;
+            border-radius: 10px;
+            background: linear-gradient(120deg, rgba(37,99,235,0.1), rgba(13,148,136,0.1));
+            border: 1px solid var(--stroke);
+            font-weight: 600;
+            font-size: clamp(14px, 1.5vw, 17px);
+        }
+        .title-slide { display: grid; grid-template-columns: 1.15fr 0.85fr; align-items: stretch; gap: 24px; }
+        .title-mark {
+            width: min(300px, 100%);
+            aspect-ratio: 1;
+            border-radius: 28px;
+            background: conic-gradient(from 200deg, #2563eb, #bfdbfe, #0d9488, #2563eb);
+            display: grid;
+            place-items: center;
+            color: #fff;
+            font-family: "JetBrains Mono", monospace;
+            font-size: clamp(18px, 2.2vw, 28px);
+            text-align: center;
+            padding: 24px;
+            align-self: center;
+            justify-self: center;
+            line-height: 1.4;
+        }
+        .title-info { display: flex; flex-direction: column; height: 100%; justify-content: space-between; align-self: stretch; }
+        .meta { margin-top: 12px; display: grid; gap: 5px; font-size: clamp(13px, 1.5vw, 17px); color: var(--subtle); }
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(13,148,136,0.08));
+            border: 1px solid var(--stroke);
+            color: var(--accent-2);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: clamp(13px, 1.4vw, 15px);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            width: fit-content;
+        }
+        .github-link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15,23,42,0.14); }
+        .github-icon { width: 18px; height: 18px; fill: currentColor; }
+        .progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 5px;
+            width: 0;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            transition: width 0.25s ease;
+        }
+        .controls {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%) scale(var(--scale));
+            transform-origin: center;
+            bottom: max(16px, env(safe-area-inset-bottom));
+            display: flex;
+            gap: 12px;
+            z-index: 10;
+        }
+        button {
+            padding: 10px 18px;
+            border-radius: 999px;
+            border: 1px solid var(--stroke);
+            background: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--ink);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            font-family: inherit;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15,23,42,0.12); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+        .footer { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--subtle); }
+        .section-title { font-size: clamp(13px, 1.6vw, 17px); color: var(--accent-2); margin-top: 4px; font-weight: 700; }
+        @media (max-width: 900px) {
+            .frame { width: min(98vw, 980px); height: auto; min-height: 62vh; }
+            .title-slide { grid-template-columns: 1fr; text-align: center; }
+            .three-col { grid-template-columns: 1fr 1fr; }
+            .deck { padding: 18px; align-items: flex-start; }
+        }
+        @media (max-width: 600px) {
+            body { overflow: auto; }
+            .deck { padding: 12px; min-height: 100dvh; }
+            .frame { width: 100%; min-height: 68vh; border-radius: 16px; }
+            .slide { padding: 16px; gap: 8px; }
+            .controls { position: sticky; bottom: 12px; transform: translateX(-50%); }
+            .three-col { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="deck">
+    <div class="frame">
+        <div class="progress" id="progress"></div>
+
+        <!-- ── SLIDE 1: Title ─────────────────────────────────────────── -->
+        <section class="slide active" data-title="Title">
+            <div></div>
+            <div class="title-slide">
+                <div class="title-info">
+                    <div>
+                        <div class="pill">Workshop</div>
+                        <h1 class="slide-title" style="margin-top:10px;">Software Architecture<br>with C++</h1>
+                        <p class="slide-subtitle">Building scalable and sustainable enterprise software</p>
+                        <p style="margin-top:10px;font-size:clamp(13px,1.5vw,17px);color:var(--subtle);font-style:italic;">
+                            "Design principles applied to real-world distributed C++ systems."
+                        </p>
+                    </div>
+                    <div class="meta">
+                        <p>Based on <em style="color:var(--accent-2);font-style:italic;">Software Architecture with C++</em></p>
+                        <p>Ostrowski &amp; Gaczkowski · Packt Publishing · 2021</p>
+                        <p>Presenter: nguyenchiemminhvu@gmail.com</p>
+                        <a href="https://github.com/nguyenchiemminhvu/software_architecture_with_cpp" target="_blank" class="github-link">
+                            <svg class="github-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                            </svg>
+                            View on GitHub
+                        </a>
+                    </div>
+                </div>
+                <div class="title-mark">Software<br>Architecture<br><span style="font-size:0.65em;opacity:0.85;">with C++</span></div>
+            </div>
+            <div class="footer"><span>Software Architecture with C++</span><span>1 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 2: Who This Workshop Is For ─────────────────────── -->
+        <section class="slide" data-title="Who This Is For">
+            <h1 class="slide-title">Who This Workshop Is For</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="card">
+                        <h3>Target Audience</h3>
+                        <ul>
+                            <li>C++ developers moving into technical leadership</li>
+                            <li>Architects who want to anchor decisions in C++ idioms</li>
+                            <li>Engineers working on distributed systems in C++</li>
+                            <li>Anyone who needs to communicate architecture across teams</li>
+                        </ul>
+                    </div>
+                    <div class="callout secondary">
+                        <h3>Prerequisites</h3>
+                        <p>Proficiency in C++14/17 · Basic familiarity with CMake</p>
+                    </div>
+                </div>
+                <div class="callout">
+                    <h3>What You Will Get</h3>
+                    <ul>
+                        <li>Principled vocabulary to discuss architecture</li>
+                        <li>C++20 idioms that reflect architectural intent</li>
+                        <li>Runnable demos for every concept (CMake + C++20)</li>
+                        <li>Trade-off analysis for every major pattern</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer"><span>Introduction</span><span>2 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 3: Workshop Structure ────────────────────────────── -->
+        <section class="slide" data-title="Workshop Structure">
+            <h1 class="slide-title">Workshop Structure</h1>
+            <div class="content">
+                <div class="agenda-list">
+                    <div class="agenda-item">Part I &nbsp; (Ch 1–3) &nbsp; — &nbsp; Architecture Fundamentals: principles, styles, requirements</div>
+                    <div class="agenda-item">Part II &nbsp;(Ch 4–8) &nbsp; — &nbsp; Design and Development: system design, C++20, patterns, build</div>
+                    <div class="agenda-item">Part III (Ch 9–11) — &nbsp; Quality Attributes: CI/CD, security, performance</div>
+                    <div class="agenda-item">Part IV &nbsp;(Ch 12–15) — Cloud-Native: SOA, microservices, containers, cloud-native design</div>
+                </div>
+                <div class="callout secondary">
+                    <h3>Format</h3>
+                    <p>Each chapter = <strong>concept lecture</strong> + <strong>C++ demo</strong> + <strong>discussion</strong>. All demos compile with CMake and C++20.</p>
+                </div>
+            </div>
+            <div class="footer"><span>Introduction</span><span>3 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 4: Learning Goals ────────────────────────────────── -->
+        <section class="slide" data-title="Learning Goals">
+            <h1 class="slide-title">Learning Goals</h1>
+            <div class="content">
+                <div class="agenda-list">
+                    <div class="agenda-item">1. Apply <strong>SOLID</strong> and <strong>DDD</strong> to decompose large C++ systems</div>
+                    <div class="agenda-item">2. Choose between <strong>architectural styles</strong> for a given problem</div>
+                    <div class="agenda-item">3. Use <strong>C++20 features</strong> for safer, more expressive design</div>
+                    <div class="agenda-item">4. Write <strong>testable C++</strong> code with dependency injection</div>
+                    <div class="agenda-item">5. Design <strong>secure, high-performance</strong> services</div>
+                    <div class="agenda-item">6. Architect and operate <strong>microservices</strong> in Kubernetes</div>
+                </div>
+            </div>
+            <div class="footer"><span>Introduction</span><span>4 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 5: Ch 1 — Principles ────────────────────────────── -->
+        <section class="slide" data-title="Architecture Principles">
+            <h1 class="slide-title">Ch 1: Principles of Software Architecture</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Core Question</h3>
+                        <p>What separates <em>design</em> from <em>architecture</em>?</p>
+                        <p style="margin-top:8px;"><strong>Architecture</strong> = decisions that are <strong>hard to reverse</strong> and have <strong>systemic impact</strong>.</p>
+                    </div>
+                    <div class="card">
+                        <h3>SOLID + DRY + YAGNI</h3>
+                        <ul>
+                            <li><strong>SRP</strong> — one reason to change</li>
+                            <li><strong>OCP</strong> — open to extension, closed to modification</li>
+                            <li><strong>DIP</strong> — depend on abstractions, not concretions</li>
+                            <li><strong>DRY</strong> — one authoritative source for every fact</li>
+                            <li><strong>YAGNI</strong> — don't build what you don't need today</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="callout warn">
+                    <h3>Design vs Architecture — examples</h3>
+                    <ul>
+                        <li>"Constructor or factory function?" → <strong>design</strong>, easy to change</li>
+                        <li>"Monolith or microservices?" → <strong>architecture</strong>, very hard to change</li>
+                        <li>"Which library for JSON?" → <strong>design</strong></li>
+                        <li>"Synchronous or event-driven?" → <strong>architecture</strong></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer"><span>Part I — Architecture Fundamentals</span><span>5 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 6: Coupling and Cohesion ────────────────────────── -->
+        <section class="slide" data-title="Coupling and Cohesion">
+            <h1 class="slide-title">Coupling and Cohesion</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>The Architectural Ideal</h3>
+                        <p style="font-size:1.1em;font-weight:700;color:var(--accent-2);">High Cohesion + Low Coupling</p>
+                    </div>
+                    <table>
+                        <thead><tr><th></th><th>Low Cohesion</th><th>High Cohesion</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Low Coupling</strong></td><td>⚠️ Fragmented</td><td>✅ Ideal</td></tr>
+                            <tr><td><strong>High Coupling</strong></td><td>❌ God module</td><td>❌ Worst case</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <pre><span class="cm">// C++ idiom: interface = inverted dependency</span>
+<span class="kw">class</span> <span class="ty">i_logger</span> {
+<span class="kw">public</span>:
+  <span class="kw">virtual</span> <span class="kw">void</span> <span class="nm">log</span>(<span class="ty">std::string_view</span>) = 0;
+  <span class="kw">virtual</span> ~<span class="ty">i_logger</span>() = <span class="kw">default</span>;
+};
+
+<span class="kw">class</span> <span class="ty">order_service</span> {
+  <span class="ty">i_logger</span>&amp; <span class="nm">log_</span>; <span class="cm">// depends on abstraction</span>
+<span class="kw">public</span>:
+  <span class="ty">order_service</span>(<span class="ty">i_logger</span>&amp; l) : <span class="nm">log_</span>(l) {}
+  <span class="cm">// test: inject fake_logger</span>
+  <span class="cm">// prod: inject spdlog_adapter</span>
+};</pre>
+            </div>
+            <div class="footer"><span>Part I — Architecture Fundamentals</span><span>6 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 7: Domain-Driven Design ─────────────────────────── -->
+        <section class="slide" data-title="Domain-Driven Design">
+            <h1 class="slide-title">Domain-Driven Design in C++</h1>
+            <div class="content two-col">
+                <div>
+                    <table>
+                        <thead><tr><th>DDD Concept</th><th>C++ Idiom</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Entity</strong></td><td>Class with identity field; equality by ID</td></tr>
+                            <tr><td><strong>Value Object</strong></td><td><code>const</code> struct; <code>operator==</code> on all fields</td></tr>
+                            <tr><td><strong>Aggregate</strong></td><td>Class owning a consistency boundary</td></tr>
+                            <tr><td><strong>Repository</strong></td><td>Abstract class returning domain objects</td></tr>
+                            <tr><td><strong>Domain Event</strong></td><td><code>struct OrderPlaced { int id; ... };</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Goal</h3>
+                        <p>When a domain expert reads your class names and method names, they should recognise them. Code speaks the language of the business.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Value Object vs Entity</h3>
+                        <ul>
+                            <li><strong>Value Object</strong>: no identity — two <code>Money{100, "USD"}</code> objects are equal</li>
+                            <li><strong>Entity</strong>: identity matters — two orders with different IDs are different, even if every other field matches</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part I — Architecture Fundamentals</span><span>7 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 8: Ch 2 — Architectural Styles ──────────────────── -->
+        <section class="slide" data-title="Architectural Styles">
+            <h1 class="slide-title">Ch 2: Architectural Styles</h1>
+            <div class="content">
+                <table>
+                    <thead><tr><th>Style</th><th>Coupling</th><th>Scalability</th><th>Complexity</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>Monolith</strong></td><td>Low ops complexity</td><td>Vertical</td><td>Low initially</td></tr>
+                        <tr><td><strong>Layered</strong></td><td>Moderate</td><td>Vertical</td><td>Moderate</td></tr>
+                        <tr><td><strong>Event-driven</strong></td><td>Very loose</td><td>High</td><td>High (async)</td></tr>
+                        <tr><td><strong>Microservices</strong></td><td>Loose</td><td>Horizontal</td><td>Highest</td></tr>
+                    </tbody>
+                </table>
+                <div class="callout warn">
+                    <h3>Most Important Rule</h3>
+                    <p><strong>Choose the simplest style that meets your scalability and team requirements.</strong> Don't default to microservices. The most common mistake is choosing microservices too early.</p>
+                </div>
+            </div>
+            <div class="footer"><span>Part I — Architecture Fundamentals</span><span>8 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 9: Event-Driven Architecture in C++ ──────────────── -->
+        <section class="slide" data-title="Event-Driven in C++">
+            <h1 class="slide-title">Event-Driven Architecture in C++</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Key Benefit</h3>
+                        <p>Zero source-code dependencies between subsystems. Adding a new subscriber requires <strong>zero changes</strong> to the publisher.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Trade-offs</h3>
+                        <ul>
+                            <li>✅ Loose coupling — subsystems evolve independently</li>
+                            <li>✅ Easy to add new consumers</li>
+                            <li>⚠️ Harder to trace execution flow</li>
+                            <li>⚠️ Ordering and deduplication are your problem</li>
+                        </ul>
+                    </div>
+                </div>
+                <pre><span class="kw">template</span>&lt;<span class="kw">typename</span> <span class="ty">Event</span>&gt;
+<span class="kw">class</span> <span class="ty">event_bus</span> {
+  <span class="ty">std::vector</span>&lt;<span class="ty">std::function</span>&lt;<span class="kw">void</span>(<span class="kw">const</span> <span class="ty">Event</span>&amp;)&gt;&gt; h_;
+<span class="kw">public</span>:
+  <span class="kw">void</span> <span class="nm">subscribe</span>(<span class="ty">std::function</span>&lt;<span class="kw">void</span>(<span class="kw">const</span> <span class="ty">Event</span>&amp;)&gt; h)
+    { h_.<span class="nm">push_back</span>(<span class="ty">std::move</span>(h)); }
+  <span class="kw">void</span> <span class="nm">publish</span>(<span class="kw">const</span> <span class="ty">Event</span>&amp; e)
+    { <span class="kw">for</span> (<span class="kw">auto</span>&amp; h : h_) h(e); }
+};
+
+<span class="cm">// Typed: can't publish to wrong topic</span>
+<span class="ty">event_bus</span>&lt;<span class="ty">order_placed</span>&gt; <span class="nm">order_bus</span>;
+<span class="ty">event_bus</span>&lt;<span class="ty">payment_processed</span>&gt; <span class="nm">pay_bus</span>;</pre>
+            </div>
+            <div class="footer"><span>Part I — Architecture Fundamentals</span><span>9 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 10: Ch 3 — Requirements ──────────────────────────── -->
+        <section class="slide" data-title="Requirements">
+            <h1 class="slide-title">Ch 3: Functional &amp; Non-Functional Requirements</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="card">
+                        <h3>Architecturally Significant Requirements (ASRs)</h3>
+                        <ul>
+                            <li><strong>Functional</strong>: what the system does</li>
+                            <li><strong>Non-functional</strong>: how well it does it</li>
+                        </ul>
+                        <p style="margin-top:8px;font-size:0.9em;color:var(--subtle);">ASRs are the requirements that drive structural decisions.</p>
+                    </div>
+                    <div class="callout warn">
+                        <h3>Quality Attributes that Drive Architecture</h3>
+                        <ul>
+                            <li>Availability · Performance</li>
+                            <li>Security · Maintainability</li>
+                            <li>Scalability · Modifiability</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>4+1 View Model</h3>
+                        <ul>
+                            <li><strong>Logical</strong> — classes, packages (developers)</li>
+                            <li><strong>Development</strong> — modules, components</li>
+                            <li><strong>Process</strong> — threads, processes (runtime)</li>
+                            <li><strong>Physical</strong> — nodes, deployment (ops)</li>
+                            <li><strong>Scenarios</strong> — use cases (glue)</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Example ASR</h3>
+                        <p style="font-size:0.9em;">❌ "System shall store user data" — not significant</p>
+                        <p style="font-size:0.9em;margin-top:6px;">✅ "System must handle 10,000 concurrent users with p99 &lt; 100ms" — drives concurrency model, caching, infrastructure</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part I — Architecture Fundamentals</span><span>10 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 11: Ch 4 — Eight Fallacies ───────────────────────── -->
+        <section class="slide" data-title="System Design Challenges">
+            <h1 class="slide-title">Ch 4: System Design Challenges</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout warn">
+                        <h3>Eight Fallacies of Distributed Computing (Deutsch, 1994)</h3>
+                        <ol style="margin-left:18px;font-size:0.92em;">
+                            <li>The network is reliable</li>
+                            <li>Latency is zero</li>
+                            <li>Bandwidth is infinite</li>
+                            <li>The network is secure</li>
+                            <li>Topology doesn't change</li>
+                            <li>There is one administrator</li>
+                            <li>Transport cost is zero</li>
+                            <li>The network is homogeneous</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Most Dangerous in Practice</h3>
+                        <p><strong>Fallacy 1: The network is reliable.</strong></p>
+                        <p style="margin-top:6px;font-size:0.9em;">Engineers build a service calling 5 others synchronously. In production, one has a brief hiccup → cascade failure within minutes.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Fix: Design for Failure</h3>
+                        <ul>
+                            <li>Circuit breakers on all downstream calls</li>
+                            <li>Timeouts everywhere</li>
+                            <li>Retries with exponential backoff</li>
+                            <li>Graceful degradation</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part II — Design &amp; Development</span><span>11 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 12: CAP Theorem ───────────────────────────────────── -->
+        <section class="slide" data-title="CAP Theorem">
+            <h1 class="slide-title">CAP Theorem</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>A distributed system can guarantee at most two of three:</h3>
+                        <ul>
+                            <li><strong>Consistency</strong> — every read sees the latest write</li>
+                            <li><strong>Availability</strong> — every request gets a response</li>
+                            <li><strong>Partition Tolerance</strong> — works despite network splits</li>
+                        </ul>
+                    </div>
+                    <div class="callout warn">
+                        <h3>Key Insight</h3>
+                        <p>Partition tolerance is <strong>not optional</strong> in a real distributed system — networks partition. The real choice is <strong>C vs A</strong> when a partition occurs.</p>
+                    </div>
+                </div>
+                <div class="stack">
+                    <table>
+                        <thead><tr><th>Choice</th><th>Behaviour</th><th>Examples</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>CA</strong></td><td>Impossible in practice</td><td>—</td></tr>
+                            <tr><td><strong>CP</strong></td><td>Consistent; may reject writes on partition</td><td>HBase, ZooKeeper</td></tr>
+                            <tr><td><strong>AP</strong></td><td>Available; may return stale data</td><td>DynamoDB, Cassandra</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="card">
+                        <h3>In Practice</h3>
+                        <p style="font-size:0.9em;">Financial transactions → CP. User preference cache → AP. Different parts of your system can make different choices.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part II — Design &amp; Development</span><span>12 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 13: CQRS ──────────────────────────────────────────── -->
+        <section class="slide" data-title="CQRS">
+            <h1 class="slide-title">CQRS Pattern in C++</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Command Query Responsibility Segregation</h3>
+                        <p>Separate the <strong>write model</strong> (commands) from the <strong>read model</strong> (queries). Optimise each side independently.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Benefits</h3>
+                        <ul>
+                            <li>Write side: validates invariants, appends events</li>
+                            <li>Read side: denormalised projections, fast queries</li>
+                            <li>Independent scaling of reads vs writes</li>
+                            <li>No N+1 query problem on read side</li>
+                        </ul>
+                    </div>
+                </div>
+                <pre><span class="cm">// Write side — validates + produces events</span>
+<span class="kw">class</span> <span class="ty">place_order_command</span> {
+  <span class="ty">std::string</span> <span class="nm">customer_</span>;
+  <span class="kw">double</span> <span class="nm">amount_</span>;
+<span class="kw">public</span>:
+  <span class="kw">void</span> <span class="nm">validate</span>() <span class="kw">const</span>; <span class="cm">// throws on bad data</span>
+};
+
+<span class="cm">// Read side — optimised projection</span>
+<span class="kw">class</span> <span class="ty">order_summary_query</span> {
+<span class="kw">public</span>:
+  <span class="ty">std::vector</span>&lt;<span class="ty">order_dto</span>&gt; <span class="nm">execute</span>();
+};
+
+<span class="cm">// Bridge: OrderPlaced event updates read model</span>
+<span class="cm">// PlaceOrder → aggregate → OrderPlaced → projection</span></pre>
+            </div>
+            <div class="footer"><span>Part II — Design &amp; Development</span><span>13 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 14: Ch 5 — C++20 Features ───────────────────────── -->
+        <section class="slide" data-title="C++20 Features">
+            <h1 class="slide-title">Ch 5: C++ Language Features for Architecture</h1>
+            <div class="content">
+                <table>
+                    <thead><tr><th>Feature</th><th>Architectural Use</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>std::optional&lt;T&gt;</strong></td><td>Explicit nullable types; no null pointer bugs; type documents optionality</td></tr>
+                        <tr><td><strong>std::span&lt;T&gt;</strong></td><td>Non-owning views; safe replacement for pointer + length pairs</td></tr>
+                        <tr><td><strong>std::variant&lt;...&gt;</strong></td><td>Sum types; replace inheritance for closed sets of alternatives</td></tr>
+                        <tr><td><strong>Concepts</strong></td><td>Constrain template parameters; document intent; better error messages</td></tr>
+                        <tr><td><strong>constexpr</strong></td><td>Move validation to compile time; no runtime cost</td></tr>
+                        <tr><td><strong>Ranges</strong></td><td>Pipeline-style data transformations; composable; lazy evaluation</td></tr>
+                    </tbody>
+                </table>
+                <div class="callout secondary">
+                    <h3>Architecture Principle</h3>
+                    <p>Use the type system to <strong>make invalid states unrepresentable</strong>. Bugs caught at compile time cost nothing.</p>
+                </div>
+            </div>
+            <div class="footer"><span>Part II — Design &amp; Development</span><span>14 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 15: Strong Types ──────────────────────────────────── -->
+        <section class="slide" data-title="Strong Types">
+            <h1 class="slide-title">Strong Types</h1>
+            <div class="content two-col">
+                <pre><span class="bad">// ❌ Weak types: silent bug — args in wrong order</span>
+<span class="kw">void</span> <span class="nm">create_account</span>(<span class="kw">int</span> <span class="nm">user_id</span>, <span class="kw">int</span> <span class="nm">account_id</span>);
+<span class="nm">create_account</span>(42, 17);  <span class="cm">// is 42 user or account?</span>
+
+<span class="ok">// ✅ Strong types: compiler catches transposition</span>
+<span class="kw">struct</span> <span class="ty">user_id</span>    { <span class="kw">int</span> <span class="nm">value</span>; };
+<span class="kw">struct</span> <span class="ty">account_id</span> { <span class="kw">int</span> <span class="nm">value</span>; };
+<span class="kw">void</span> <span class="nm">create_account</span>(<span class="ty">user_id</span>, <span class="ty">account_id</span>); <span class="cm">// safe</span>
+
+<span class="cm">// [[nodiscard]] forces caller to handle result</span>
+[[<span class="nm">nodiscard</span>]]
+<span class="ty">std::optional</span>&lt;<span class="ty">order_id</span>&gt; <span class="nm">place_order</span>(...);</pre>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Zero Runtime Overhead</h3>
+                        <p>A trivial struct wrapper with no virtual methods compiles to the same code as a plain <code>int</code>. The protection is purely compile-time.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Where to Use</h3>
+                        <ul>
+                            <li>IDs of different entity types</li>
+                            <li>Measurements with units (meters vs feet)</li>
+                            <li>Flags and status values</li>
+                            <li>Indices into different containers</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part II — Design &amp; Development</span><span>15 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 16: Ch 6 — Design Patterns ──────────────────────── -->
+        <section class="slide" data-title="Design Patterns">
+            <h1 class="slide-title">Ch 6: Design Patterns in C++</h1>
+            <div class="content">
+                <table>
+                    <thead><tr><th>Pattern</th><th>Classic GoF</th><th>Modern C++ Idiom</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>RAII Guard</strong></td><td>no equivalent</td><td><code>std::lock_guard</code>, custom <code>scope_exit</code></td></tr>
+                        <tr><td><strong>Factory</strong></td><td>virtual factory method</td><td><code>std::function</code> returning <code>std::unique_ptr&lt;Base&gt;</code></td></tr>
+                        <tr><td><strong>Observer</strong></td><td>virtual <code>update()</code></td><td><code>std::function</code> subscriber list — accepts any callable</td></tr>
+                        <tr><td><strong>Strategy</strong></td><td>virtual base class</td><td>Policy template parameter — zero dispatch overhead</td></tr>
+                        <tr><td><strong>CRTP</strong></td><td>no equivalent</td><td>Static polymorphism for performance-critical paths</td></tr>
+                    </tbody>
+                </table>
+                <div class="callout secondary">
+                    <h3>Modern C++ Principle</h3>
+                    <p>Prefer <strong>value semantics and templates</strong> over <strong>inheritance hierarchies</strong> where performance or compile-time correctness matters.</p>
+                </div>
+            </div>
+            <div class="footer"><span>Part II — Design &amp; Development</span><span>16 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 17: CRTP ──────────────────────────────────────────── -->
+        <section class="slide" data-title="CRTP: Static Polymorphism">
+            <h1 class="slide-title">CRTP: Static Polymorphism</h1>
+            <div class="content two-col">
+                <pre><span class="cm">// CRTP — compile-time polymorphism, zero vtable</span>
+<span class="kw">template</span>&lt;<span class="kw">typename</span> <span class="ty">Derived</span>&gt;
+<span class="kw">struct</span> <span class="ty">serialisable</span> {
+  <span class="ty">std::string</span> <span class="nm">serialise</span>() <span class="kw">const</span> {
+    <span class="kw">return</span> <span class="kw">static_cast</span>&lt;<span class="kw">const</span> <span class="ty">Derived</span>*&gt;(<span class="kw">this</span>)
+               -&gt;<span class="nm">do_serialise</span>();
+    <span class="cm">// resolved at compile time — inlined</span>
+  }
+};
+
+<span class="kw">struct</span> <span class="ty">order</span> : <span class="ty">serialisable</span>&lt;<span class="ty">order</span>&gt; {
+  <span class="ty">std::string</span> <span class="nm">do_serialise</span>() <span class="kw">const</span>
+    { <span class="kw">return</span> <span class="st">"Order{...}"</span>; }
+};
+
+<span class="ty">order</span> <span class="nm">o</span>;
+<span class="nm">o</span>.<span class="nm">serialise</span>(); <span class="cm">// no virtual call</span></pre>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Zero Virtual Dispatch</h3>
+                        <p>The compiler resolves the dispatch statically. The call is inlined. Used in the STL: <code>std::char_traits</code>, iterator adapters.</p>
+                    </div>
+                    <div class="card">
+                        <h3>When to Use CRTP</h3>
+                        <ul>
+                            <li>Tight inner loops (physics, rendering)</li>
+                            <li>Real-time / embedded systems</li>
+                            <li>Policy mix-ins with multiple base classes</li>
+                            <li>When vtable cost is measurable</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part II — Design &amp; Development</span><span>17 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 18: Ch 7 — Building and Packaging ───────────────── -->
+        <section class="slide" data-title="Building and Packaging">
+            <h1 class="slide-title">Ch 7: Building and Packaging</h1>
+            <div class="content two-col">
+                <pre><span class="cm"># Modern CMake — target-based, transitive</span>
+<span class="nm">add_library</span>(order_lib STATIC src/order.cpp)
+<span class="nm">target_include_directories</span>(order_lib
+  PUBLIC include/)
+<span class="nm">target_compile_features</span>(order_lib
+  PUBLIC cxx_std_20)
+
+<span class="nm">add_executable</span>(order_service src/main.cpp)
+<span class="nm">target_link_libraries</span>(order_service
+  PRIVATE order_lib)
+<span class="cm"># order_service inherits cxx_std_20 from order_lib</span>
+
+<span class="cm"># Conan 2 — dependency management</span>
+<span class="cm"># conan install . --build=missing</span>
+<span class="cm"># cmake --preset conan-release</span></pre>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Key CMake Idioms (≥ 3.16)</h3>
+                        <ul>
+                            <li><strong>PRIVATE</strong> — internal use only</li>
+                            <li><strong>PUBLIC</strong> — propagates to linkers of this target</li>
+                            <li><strong>INTERFACE</strong> — propagates only, not used by this target</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Never use global variables</h3>
+                        <p style="font-size:0.9em;">Avoid <code>include_directories()</code>, <code>link_libraries()</code>. Use target-scoped versions — they prevent property leakage across targets.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part II — Design &amp; Development</span><span>18 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 19: Static Analysis ─────────────────────────────── -->
+        <section class="slide" data-title="Static Analysis">
+            <h1 class="slide-title">Static Analysis</h1>
+            <div class="content">
+                <table>
+                    <thead><tr><th>Tool</th><th>What it catches</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>clang-tidy</strong></td><td>Style, modernisation, bug-prone patterns, performance</td></tr>
+                        <tr><td><strong>clang-format</strong></td><td>Formatting — zero diff noise in PRs</td></tr>
+                        <tr><td><strong>AddressSanitizer</strong></td><td>Buffer overflows, use-after-free, heap corruption</td></tr>
+                        <tr><td><strong>UBSanitizer</strong></td><td>Undefined behaviour (signed overflow, null deref, etc.)</td></tr>
+                        <tr><td><strong>ThreadSanitizer</strong></td><td>Data races</td></tr>
+                        <tr><td><strong>cppcheck</strong></td><td>Additional static checks; works without compilation</td></tr>
+                    </tbody>
+                </table>
+                <div class="callout warn">
+                    <h3>Critical Practice</h3>
+                    <p>Run sanitisers in CI, not just locally. ASan and TSan find real bugs in mature C++ codebases every time they are first applied. The question is not "should we use them" but "which tool catches which class of bugs."</p>
+                </div>
+            </div>
+            <div class="footer"><span>Part II — Design &amp; Development</span><span>19 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 20: Ch 8 — Testable Code ────────────────────────── -->
+        <section class="slide" data-title="Testable Code">
+            <h1 class="slide-title">Ch 8: Writing Testable Code</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Testing Pyramid</h3>
+                        <pre style="font-size:11px;background:transparent;border:none;padding:0;color:var(--ink);">        /   E2E   \       few, slow, brittle
+       /  Integration \   more, medium speed
+      /  Unit Tests    \  many, fast, isolated</pre>
+                    </div>
+                    <div class="callout warn">
+                        <h3>Root Cause of Untestable Code</h3>
+                        <p>A class instantiates its dependencies with <code>new</code> inside the constructor. You cannot test it in isolation — not a testing problem, a <strong>design problem</strong>.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Fix: Constructor Injection</h3>
+                        <p style="font-size:0.9em;">If a class receives its dependencies through the constructor, you can inject fakes in tests and real implementations in production.</p>
+                    </div>
+                </div>
+                <div class="callout">
+                    <h3>Test Double Taxonomy</h3>
+                    <ul>
+                        <li><strong>Stub</strong> — returns hardcoded values; no assertions</li>
+                        <li><strong>Fake</strong> — working lightweight implementation (in-memory DB)</li>
+                        <li><strong>Mock</strong> — verifies specific interactions were made</li>
+                        <li><strong>Spy</strong> — records calls; assertions happen after the act</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer"><span>Part III — Quality Attributes</span><span>20 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 21: Dependency Injection ────────────────────────── -->
+        <section class="slide" data-title="Dependency Injection">
+            <h1 class="slide-title">Dependency Injection in C++</h1>
+            <div class="content two-col">
+                <pre><span class="kw">class</span> <span class="ty">order_service</span> {
+  <span class="ty">i_payment_gateway</span>&amp; <span class="nm">payment_</span>;
+  <span class="ty">i_inventory</span>&amp;        <span class="nm">inventory_</span>;
+<span class="kw">public</span>:
+  <span class="ty">order_service</span>(<span class="ty">i_payment_gateway</span>&amp; p,
+                <span class="ty">i_inventory</span>&amp; i)
+    : <span class="nm">payment_</span>(p), <span class="nm">inventory_</span>(i) {}
+  <span class="cm">// service only knows about interfaces</span>
+};
+
+<span class="cm">// In tests: inject fakes</span>
+<span class="ty">fake_payment</span>    <span class="nm">fp</span>;
+<span class="ty">fake_inventory</span>  <span class="nm">fi</span>;
+<span class="ty">order_service</span>   <span class="nm">svc</span>(<span class="nm">fp</span>, <span class="nm">fi</span>);
+<span class="cm">// assert behaviour in isolation</span>
+
+<span class="cm">// In production: inject real impls</span>
+<span class="ty">stripe_gateway</span>  <span class="nm">pg</span>;
+<span class="ty">db_inventory</span>    <span class="nm">di</span>;
+<span class="ty">order_service</span>   <span class="nm">prod</span>(<span class="nm">pg</span>, <span class="nm">di</span>);</pre>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>No Framework Needed</h3>
+                        <p>Constructor injection is sufficient in C++. No Spring/Guice equivalent required. Keep it simple — the container is your <code>main()</code>.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Rules</h3>
+                        <ul>
+                            <li>No <code>new ConcreteImpl()</code> inside a service</li>
+                            <li>No <code>Singleton::get_instance()</code></li>
+                            <li>No global state</li>
+                            <li>Depend on interfaces, not concretions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part III — Quality Attributes</span><span>21 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 22: Ch 9 — CI/CD ─────────────────────────────────── -->
+        <section class="slide" data-title="CI/CD">
+            <h1 class="slide-title">Ch 9: CI/CD</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>CI Pipeline Stages</h3>
+                        <pre style="font-size:11px;background:transparent;border:none;padding:0;color:var(--ink);line-height:1.8;">git push → build → test → lint
+  → package → staging deploy
+  → integration test → production</pre>
+                    </div>
+                    <div class="callout warn">
+                        <h3>Most Important Rule</h3>
+                        <p><strong>Build once, deploy the same artefact everywhere.</strong></p>
+                        <p style="margin-top:6px;font-size:0.9em;">Do not build in staging, build in prod, build in dev. Build once in CI, push to a registry, deploy that exact binary everywhere. Eliminates "it worked in staging" bugs.</p>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="card">
+                        <h3>Key Practices</h3>
+                        <ul>
+                            <li>Every commit builds and tests</li>
+                            <li>Feature flags over long-lived branches</li>
+                            <li>Automated rollback on health probe failure</li>
+                            <li>Trunk-based development</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>C++ Specific</h3>
+                        <ul>
+                            <li>Cache build objects (ccache)</li>
+                            <li>Run sanitisers in CI (not just locally)</li>
+                            <li>Enforce clang-format in PR checks</li>
+                            <li>Publish coverage reports</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part III — Quality Attributes</span><span>22 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 23: Ch 10 — Security ────────────────────────────── -->
+        <section class="slide" data-title="Security">
+            <h1 class="slide-title">Ch 10: Security by Design</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout warn">
+                        <h3>OWASP Top 10 — C++ Relevance</h3>
+                        <ul>
+                            <li><strong>A01</strong> Broken Access Control — check permissions at every layer</li>
+                            <li><strong>A02</strong> Cryptographic Failures — use system TLS; never roll your own crypto</li>
+                            <li><strong>A03</strong> Injection — validate and sanitise all external input</li>
+                            <li><strong>A05</strong> Security Misconfiguration — no debug endpoints, no default passwords</li>
+                            <li><strong>A09</strong> Logging Failures — log security events; do not log secrets</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Secure Design Principles</h3>
+                        <ul>
+                            <li><strong>Least privilege</strong> — request only needed permissions</li>
+                            <li><strong>Defence in depth</strong> — multiple independent layers</li>
+                            <li><strong>Fail secure</strong> — deny by default; whitelist</li>
+                            <li><strong>Zero trust</strong> — verify every request, every time</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Threat Modelling</h3>
+                        <p style="font-size:0.9em;">For each system entry point: who can reach it, what can they send, what can go wrong? Document and mitigate.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part III — Quality Attributes</span><span>23 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 24: Secure C++ Idioms ───────────────────────────── -->
+        <section class="slide" data-title="Secure C++ Idioms">
+            <h1 class="slide-title">Secure C++ Idioms</h1>
+            <div class="content two-col">
+                <pre><span class="bad">// ❌ Classic buffer overflow pattern</span>
+<span class="kw">void</span> <span class="nm">process</span>(<span class="kw">char</span>* <span class="nm">data</span>, <span class="kw">int</span> <span class="nm">len</span>);
+
+<span class="ok">// ✅ std::span — bounds are part of the type</span>
+<span class="kw">void</span> <span class="nm">process</span>(<span class="ty">std::span</span>&lt;<span class="kw">const</span> <span class="ty">std::byte</span>&gt; <span class="nm">data</span>) {
+  <span class="kw">if</span> (<span class="nm">data</span>.<span class="nm">size</span>() &gt; MAX_PAYLOAD)
+    <span class="kw">throw</span> <span class="ty">std::invalid_argument</span>{<span class="st">"too large"</span>};
+}
+
+<span class="ok">// ✅ Checked arithmetic</span>
+<span class="kw">auto</span> <span class="nm">safe_add</span>(<span class="kw">int</span> <span class="nm">a</span>, <span class="kw">int</span> <span class="nm">b</span>)
+  -&gt; <span class="ty">std::optional</span>&lt;<span class="kw">int</span>&gt; {
+  <span class="kw">if</span> (<span class="nm">b</span> &gt; 0 &amp;&amp; <span class="nm">a</span> &gt; <span class="nm">INT_MAX</span> - <span class="nm">b</span>)
+    <span class="kw">return</span> <span class="ty">std::nullopt</span>; <span class="cm">// overflow</span>
+  <span class="kw">return</span> <span class="nm">a</span> + <span class="nm">b</span>;
+}</pre>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>std::span is the Replacement</h3>
+                        <p>The classic <code>void* data, size_t len</code> pattern has caused countless CVEs. <code>std::span</code> bundles the pointer and size — you cannot accidentally pass a span of the wrong length.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Security Checklist</h3>
+                        <ul>
+                            <li>Validate at every external boundary</li>
+                            <li>Use RAII for resource management</li>
+                            <li>Enable stack protector + FORTIFY_SOURCE</li>
+                            <li>Run ASan in CI to catch buffer issues early</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part III — Quality Attributes</span><span>24 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 25: Ch 11 — Performance ──────────────────────────── -->
+        <section class="slide" data-title="Performance">
+            <h1 class="slide-title">Ch 11: Performance Engineering</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Performance Workflow</h3>
+                        <pre style="font-size:11px;background:transparent;border:none;padding:0;color:var(--ink);line-height:1.8;">Measure → Profile → Identify hotspot
+  → Optimise → Measure again</pre>
+                        <p style="margin-top:8px;font-size:0.9em;"><strong>Never optimise without measurement first.</strong></p>
+                    </div>
+                    <div class="card">
+                        <h3>Profiling Tools</h3>
+                        <ul>
+                            <li><code>perf</code> (Linux) — CPU profiling, cache stats</li>
+                            <li>Instruments (macOS) — time profiler, allocations</li>
+                            <li><code>valgrind --tool=callgrind</code></li>
+                            <li>Google Benchmark — micro-benchmarks</li>
+                            <li>VTune, Perf Studio</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="callout warn">
+                        <h3>Common Performance Anti-Patterns</h3>
+                        <ul>
+                            <li>Optimising without profiling (guessing)</li>
+                            <li>Optimising 0.1% of runtime while ignoring 60%</li>
+                            <li>Premature optimisation (YAGNI)</li>
+                            <li>Ignoring allocator behaviour</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Low-Hanging Fruit</h3>
+                        <ul>
+                            <li>Pass by <code>const&amp;</code> for large objects</li>
+                            <li><code>reserve()</code> before bulk pushes</li>
+                            <li>Move semantics for temporaries</li>
+                            <li>Avoid virtual calls in tight loops</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part III — Quality Attributes</span><span>25 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 26: Cache-Friendly Design ───────────────────────── -->
+        <section class="slide" data-title="Cache-Friendly Design">
+            <h1 class="slide-title">Cache-Friendly Design</h1>
+            <div class="content two-col">
+                <pre><span class="cm">// AoS — interleaves hot and cold data</span>
+<span class="kw">struct</span> <span class="ty">particle</span> {
+  <span class="kw">float</span> x, y, z;         <span class="cm">// hot (physics loop)</span>
+  <span class="kw">float</span> vx, vy, vz;      <span class="cm">// hot (physics loop)</span>
+  <span class="kw">float</span> mass, health;    <span class="cm">// cold — wastes cache!</span>
+};
+<span class="cm">// updating positions loads mass+health needlessly</span>
+
+<span class="cm">// SoA — hot data together in memory</span>
+<span class="kw">struct</span> <span class="ty">particles</span> {
+  <span class="ty">std::vector</span>&lt;<span class="kw">float</span>&gt; x, y, z;     <span class="cm">// hot</span>
+  <span class="ty">std::vector</span>&lt;<span class="kw">float</span>&gt; vx, vy, vz;  <span class="cm">// hot</span>
+  <span class="ty">std::vector</span>&lt;<span class="kw">float</span>&gt; mass, health; <span class="cm">// cold</span>
+};
+<span class="cm">// position loop only touches x/y/z/vx/vy/vz</span></pre>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Why It Matters</h3>
+                        <ul>
+                            <li>Cache line = 64 bytes</li>
+                            <li>L1 cache latency: ~1 ns</li>
+                            <li>Main memory latency: ~100 ns</li>
+                            <li>SoA can be <strong>2–4× faster</strong> in tight loops</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Other Cache Optimisations</h3>
+                        <ul>
+                            <li>Row-major traversal (C++ arrays)</li>
+                            <li>Prefetch with <code>__builtin_prefetch</code></li>
+                            <li>Avoid pointer-chasing (linked lists)</li>
+                            <li>Align hot data to cache lines</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part III — Quality Attributes</span><span>26 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 27: Ch 12 — SOA ──────────────────────────────────── -->
+        <section class="slide" data-title="Service-Oriented Architecture">
+            <h1 class="slide-title">Ch 12: Service-Oriented Architecture</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>SOA Principles</h3>
+                        <ul>
+                            <li>Services have explicit, <strong>versioned contracts</strong></li>
+                            <li>Services are <strong>independently deployable</strong></li>
+                            <li>Communication over <strong>standard protocols</strong></li>
+                            <li>All state-changing operations must be <strong>idempotent</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <table>
+                        <thead><tr><th>Protocol</th><th>Use case</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>REST/HTTP</strong></td><td>Public APIs, simple CRUD</td></tr>
+                            <tr><td><strong>gRPC</strong></td><td>Internal services, streaming, strong typing</td></tr>
+                            <tr><td><strong>MQTT</strong></td><td>IoT, low-bandwidth pub/sub</td></tr>
+                            <tr><td><strong>ZeroMQ</strong></td><td>High-throughput, broker-free messaging</td></tr>
+                            <tr><td><strong>Kafka</strong></td><td>High-volume event streaming, replay</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>27 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 28: REST vs gRPC ──────────────────────────────────── -->
+        <section class="slide" data-title="REST vs gRPC">
+            <h1 class="slide-title">REST vs gRPC</h1>
+            <div class="content">
+                <table>
+                    <thead><tr><th></th><th>REST</th><th>gRPC</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>Serialisation</strong></td><td>JSON (text)</td><td>Protobuf (binary)</td></tr>
+                        <tr><td><strong>Schema</strong></td><td>Optional (OpenAPI)</td><td>Required (.proto)</td></tr>
+                        <tr><td><strong>Streaming</strong></td><td>Limited (SSE/WebSocket)</td><td>Native — 4 modes</td></tr>
+                        <tr><td><strong>Browser support</strong></td><td>Native</td><td>Via grpc-web</td></tr>
+                        <tr><td><strong>Performance</strong></td><td>Baseline</td><td>~5–10× faster</td></tr>
+                        <tr><td><strong>Type safety</strong></td><td>Runtime (JSON coercion)</td><td>Compile-time (protobuf)</td></tr>
+                    </tbody>
+                </table>
+                <div class="callout secondary">
+                    <h3>Rule of Thumb</h3>
+                    <p>Use <strong>REST</strong> for external-facing APIs where you don't control the client. Use <strong>gRPC</strong> for internal service-to-service calls — compile-time type safety eliminates an entire class of bugs.</p>
+                </div>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>28 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 29: Ch 13 — Microservices ───────────────────────── -->
+        <section class="slide" data-title="Microservices">
+            <h1 class="slide-title">Ch 13: Designing Microservices</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Decomposition by Bounded Context (DDD)</h3>
+                        <ul>
+                            <li>Identify bounded contexts → one service per context</li>
+                            <li>Each service <strong>owns its data</strong> — no shared databases</li>
+                            <li>Communicate via <strong>events</strong> (async) or APIs (sync)</li>
+                        </ul>
+                    </div>
+                    <div class="callout warn">
+                        <h3>Anti-Patterns</h3>
+                        <ul>
+                            <li><strong>Distributed monolith</strong> — micro deployments, tight coupling</li>
+                            <li><strong>Shared DB</strong> — breaks independent deployment</li>
+                            <li><strong>Nanoservices</strong> — overhead &gt; benefit</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="card">
+                        <h3>Service Decomposition Example</h3>
+                        <ul>
+                            <li><strong>order-service</strong> — owns orders DB</li>
+                            <li><strong>payment-service</strong> — owns payment + ledger DB</li>
+                            <li><strong>inventory-service</strong> — owns stock DB</li>
+                            <li><strong>notification-service</strong> — owns templates DB</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Communication</h3>
+                        <ul>
+                            <li><strong>Sync</strong> (gRPC/HTTP): use when you need an immediate result</li>
+                            <li><strong>Async</strong> (events): use when temporal decoupling is acceptable</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>29 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 30: Saga Pattern ──────────────────────────────────── -->
+        <section class="slide" data-title="Saga Pattern">
+            <h1 class="slide-title">The Saga Pattern</h1>
+            <div class="content two-col">
+                <pre><span class="cm">// Distributed transaction without 2PC</span>
+<span class="nm">OrderPlaced</span>
+  └→ <span class="nm">PaymentService</span>.<span class="nm">ChargeCard</span>
+       ├ <span class="ok">success</span> → <span class="nm">InventoryService</span>.<span class="nm">ReserveStock</span>
+       │              ├ <span class="ok">success</span> → <span class="nm">Order</span>.<span class="nm">Confirm</span>
+       │              └ <span class="bad">failure</span> → <span class="nm">PaymentService</span>.<span class="nm">RefundCard</span>
+       │                          → <span class="nm">Order</span>.<span class="nm">Cancel</span>
+       └ <span class="bad">failure</span> → <span class="nm">Order</span>.<span class="nm">Cancel</span>
+
+<span class="cm">// Each step has a compensating transaction:</span>
+<span class="cm">// ChargeCard ← compensated by RefundCard</span>
+<span class="cm">// ReserveStock ← compensated by ReleaseStock</span></pre>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Why Sagas?</h3>
+                        <p>You cannot use database transactions across service boundaries. Sagas replace one atomic transaction with a sequence of local transactions, each with a compensating transaction that rolls back the effect on failure.</p>
+                    </div>
+                    <div class="callout warn">
+                        <h3>Critical Rule</h3>
+                        <p>Design the <strong>compensating transactions when you design the forward transactions</strong> — not as an afterthought. See <code>ch13_designing_microservices/src/microservice_demo.cpp</code>.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>30 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 31: Observability ────────────────────────────────── -->
+        <section class="slide" data-title="Observability">
+            <h1 class="slide-title">Observability</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="card">
+                        <h3>Logs — what happened</h3>
+                        <p style="font-size:0.9em;">Structured JSON with <strong>correlation ID</strong> propagated through all downstream calls.</p>
+                        <pre style="margin-top:8px;font-size:10px;">{"level":"info","trace_id":"abc",
+ "service":"order","msg":"placed"}</pre>
+                    </div>
+                    <div class="card">
+                        <h3>Metrics — how the system performs</h3>
+                        <p style="font-size:0.9em;"><strong>RED method</strong>: Rate · Errors · Duration (p50/p95/p99)</p>
+                        <p style="font-size:0.9em;margin-top:4px;"><strong>USE method</strong> (infra): Utilisation · Saturation · Errors</p>
+                    </div>
+                    <div class="card">
+                        <h3>Traces — how a request flowed</h3>
+                        <p style="font-size:0.9em;">Distributed tracing with span context propagation across all service boundaries. Standard: <strong>OpenTelemetry</strong>.</p>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="callout warn">
+                        <h3>Observability is Not Optional</h3>
+                        <p>In a microservices system, a single user request might touch 10 services. Without distributed tracing, production debugging is impossible.</p>
+                    </div>
+                    <div class="callout secondary">
+                        <h3>Correlation ID</h3>
+                        <p>Generated at the edge (API gateway). <strong>Every service propagates it</strong> in logs and in downstream call headers. Enables full trace reconstruction.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>31 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 32: Ch 14 — Containers ───────────────────────────── -->
+        <section class="slide" data-title="Containers">
+            <h1 class="slide-title">Ch 14: Containers</h1>
+            <div class="content two-col">
+                <pre><span class="cm"># Multi-stage Dockerfile for C++</span>
+<span class="kw">FROM</span> ubuntu:22.04 <span class="nm">AS builder</span>
+<span class="kw">RUN</span> apt-get install -y cmake g++ libssl-dev
+<span class="kw">COPY</span> . .
+<span class="kw">RUN</span> cmake -B build -DCMAKE_BUILD_TYPE=Release \
+  &amp;&amp; cmake --build build -j$(nproc)
+
+<span class="cm"># Runtime: only binary + runtime deps (~150 MB)</span>
+<span class="kw">FROM</span> ubuntu:22.04 <span class="nm">AS runtime</span>
+<span class="kw">RUN</span> apt-get install -y libssl3 \
+  &amp;&amp; rm -rf /var/lib/apt/lists/*
+<span class="kw">COPY</span> --from=builder /build/my_service /app/
+<span class="kw">RUN</span> useradd -r app &amp;&amp; chown app:app /app/my_service
+<span class="kw">USER</span> app
+<span class="kw">ENTRYPOINT</span> ["/app/my_service"]</pre>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Why Multi-Stage?</h3>
+                        <p>Build stage: ~2 GB (compiler, CMake, headers). Runtime stage: ~150 MB. Smaller image = faster pull, smaller attack surface.</p>
+                    </div>
+                    <div class="callout warn">
+                        <h3>Never:</h3>
+                        <ul>
+                            <li>Run as root inside a container</li>
+                            <li>Bake secrets into image layers</li>
+                            <li>Use <code>latest</code> tag in production</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>32 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 33: Kubernetes Essentials ───────────────────────── -->
+        <section class="slide" data-title="Kubernetes Essentials">
+            <h1 class="slide-title">Kubernetes Essentials</h1>
+            <div class="content two-col">
+                <pre><span class="cm"># Every service needs all three:</span>
+<span class="nm">resources</span>:
+  <span class="nm">requests</span>: {cpu: <span class="st">"100m"</span>, memory: <span class="st">"128Mi"</span>}  <span class="cm"># scheduling</span>
+  <span class="nm">limits</span>:   {cpu: <span class="st">"500m"</span>, memory: <span class="st">"512Mi"</span>}  <span class="cm"># enforcement</span>
+
+<span class="nm">readinessProbe</span>:
+  <span class="nm">httpGet</span>: {path: <span class="st">/health</span>, port: 8080}
+  <span class="nm">initialDelaySeconds</span>: 5    <span class="cm"># load balancer gate</span>
+
+<span class="nm">livenessProbe</span>:
+  <span class="nm">httpGet</span>: {path: <span class="st">/health</span>, port: 8080}
+  <span class="nm">periodSeconds</span>: 10         <span class="cm"># restart if fails</span></pre>
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Three Mandatory Resources</h3>
+                        <ul>
+                            <li><strong>Resource requests + limits</strong>: without them, pods are scheduled on overloaded nodes and OOM-killed</li>
+                            <li><strong>readinessProbe</strong>: without it, traffic is routed before the app is ready</li>
+                            <li><strong>livenessProbe</strong>: without it, a deadlocked pod is never restarted</li>
+                        </ul>
+                    </div>
+                    <div class="callout warn">
+                        <h3>Never deploy without all three.</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>33 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 34: Ch 15 — Cloud-Native Design ─────────────────── -->
+        <section class="slide" data-title="Cloud-Native Design">
+            <h1 class="slide-title">Ch 15: Cloud-Native Design</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Twelve-Factor App — Critical Factors</h3>
+                        <table style="margin-top:6px;font-size:0.9em;">
+                            <thead><tr><th>Factor</th><th>Rule</th></tr></thead>
+                            <tbody>
+                                <tr><td><strong>III. Config</strong></td><td>Env vars, never in code</td></tr>
+                                <tr><td><strong>VI. Processes</strong></td><td>Stateless; state in backing services</td></tr>
+                                <tr><td><strong>IX. Disposability</strong></td><td>Fast start; graceful SIGTERM</td></tr>
+                                <tr><td><strong>XI. Logs</strong></td><td>stdout only; never write log files</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="callout warn">
+                        <h3>Stateless Processes (Factor VI)</h3>
+                        <p>If your service stores state in memory — sessions, caches, in-flight data — you cannot scale horizontally or restart freely. Everything must live in external backing services.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Graceful Shutdown (Factor IX)</h3>
+                        <p style="font-size:0.9em;">Handle <code>SIGTERM</code>: drain in-flight requests, close DB connections, exit cleanly. Kubernetes sends <code>SIGTERM</code> 30s before force-killing.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>34 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 35: Resilience Patterns ──────────────────────────── -->
+        <section class="slide" data-title="Resilience Patterns">
+            <h1 class="slide-title">Cloud-Native Resilience Patterns</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>Circuit Breaker</h3>
+                        <pre style="font-size:11px;background:transparent;border:none;padding:0;color:var(--ink);line-height:1.8;">Closed → failures exceed threshold → Open
+Open → timeout elapsed → Half-Open
+  → probe success → Closed
+  → probe failure → Open</pre>
+                        <p style="margin-top:6px;font-size:0.9em;">When Open: fail fast, return cached result or error — don't call downstream. Thread pool stays healthy. No cascade.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Bulkhead</h3>
+                        <p style="font-size:0.9em;">Isolate resources per dependency. Separate thread pools for each downstream service — one slow DB cannot exhaust the pool for all services.</p>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="callout warn">
+                        <h3>Without Circuit Breaker</h3>
+                        <p style="font-size:0.9em;">Downstream slow → requests queue up → thread pool exhausts → your service slows → upstream queues → cascade failure.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Retry with Exponential Backoff + Jitter</h3>
+                        <pre style="font-size:11px;background:transparent;border:none;padding:0;color:var(--ink);">wait = min(base × 2^attempt
+           + jitter, max_wait)</pre>
+                        <p style="font-size:0.9em;margin-top:4px;">Jitter prevents thundering herd on recovery.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>35 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 36: Service Mesh ──────────────────────────────────── -->
+        <section class="slide" data-title="Service Mesh">
+            <h1 class="slide-title">Service Mesh</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="callout secondary">
+                        <h3>What a Mesh Provides (Transparent to App)</h3>
+                        <ul>
+                            <li><strong>mTLS</strong> — all east-west traffic encrypted + authenticated</li>
+                            <li><strong>Retries</strong> — automatic with exponential backoff</li>
+                            <li><strong>Circuit breaking</strong> — at the proxy layer</li>
+                            <li><strong>Distributed tracing</strong> — auto-inject span headers</li>
+                            <li><strong>Traffic management</strong> — canary, A/B, blue-green</li>
+                        </ul>
+                    </div>
+                    <div class="callout warn">
+                        <h3>Trade-off</h3>
+                        <p>Application code becomes simpler. Operational complexity of the control plane increases. For large teams with many services: usually worth it.</p>
+                    </div>
+                </div>
+                <pre><span class="cm"># Pod with sidecar proxy (auto-injected)</span>
+<span class="nm">Pod</span>
+├── <span class="ty">app</span> container (C++ service)
+│   ├── handles business logic only
+│   └── TLS/retries/traces → NOT here
+└── <span class="ty">sidecar</span> proxy (Envoy)
+    ├── terminates mTLS
+    ├── applies retry policy
+    ├── injects trace headers
+    └── reports metrics to Prometheus
+
+<span class="cm"># Control plane (Istiod) pushes policy</span>
+<span class="cm"># to all sidecars — no app restart needed</span>
+<span class="cm"># Tools: Istio, Linkerd, Consul Connect</span></pre>
+            </div>
+            <div class="footer"><span>Part IV — Cloud-Native</span><span>36 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 37: Summary ───────────────────────────────────────── -->
+        <section class="slide" data-title="Key Takeaways">
+            <h1 class="slide-title">Summary &amp; Key Takeaways</h1>
+            <div class="content">
+                <div class="agenda-list">
+                    <div class="agenda-item">1. <strong>Architecture is about trade-offs</strong> — there is no universally best style</div>
+                    <div class="agenda-item">2. <strong>Design for change</strong> — SOLID, DDD, interfaces keep systems maintainable</div>
+                    <div class="agenda-item">3. <strong>C++20 is expressive and safe</strong> — use <code>optional</code>, <code>span</code>, <code>variant</code>, concepts</div>
+                    <div class="agenda-item">4. <strong>Testability is designed in</strong> — dependency injection, interfaces, seams from day one</div>
+                    <div class="agenda-item">5. <strong>Measure before optimising</strong> — profile-guided, cache-aware design</div>
+                    <div class="agenda-item">6. <strong>Secure by design</strong> — validate input, least privilege, no magic crypto</div>
+                    <div class="agenda-item">7. <strong>Observability is mandatory</strong> — logs + metrics + traces from day one</div>
+                    <div class="agenda-item">8. <strong>Microservices are a trade-off</strong> — start simpler; split when seams are clear</div>
+                </div>
+            </div>
+            <div class="footer"><span>Summary</span><span>37 / 38</span></div>
+        </section>
+
+        <!-- ── SLIDE 38: Next Steps ────────────────────────────────────── -->
+        <section class="slide" data-title="Next Steps">
+            <h1 class="slide-title">Recommended Next Steps</h1>
+            <div class="content two-col">
+                <div class="stack">
+                    <div class="card">
+                        <h3>Recommended Reading</h3>
+                        <ul>
+                            <li><em>Designing Data-Intensive Applications</em> — Kleppmann</li>
+                            <li><em>Clean Architecture</em> — Martin</li>
+                            <li><em>Large-Scale C++, Vol I</em> — Lakos</li>
+                            <li><em>Domain-Driven Design</em> — Evans</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Tools to Explore</h3>
+                        <ul>
+                            <li>OpenTelemetry — distributed tracing standard</li>
+                            <li>Istio / Linkerd — service mesh</li>
+                            <li>Conan 2 — C++ package management</li>
+                            <li>Google Benchmark — micro-benchmarks</li>
+                            <li>clang-tidy + AddressSanitizer</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="callout secondary">
+                    <h3>Practice: Write Architecture Decision Records</h3>
+                    <p>Take a real system you're working on. Write an <strong>ADR</strong> for three of its most significant structural decisions:</p>
+                    <ul style="margin-top:8px;margin-left:18px;font-size:0.9em;">
+                        <li>Context — what forced the decision?</li>
+                        <li>Alternatives considered — what else was on the table?</li>
+                        <li>Trade-offs — what does each option cost?</li>
+                        <li>Decision — what did you choose and why?</li>
+                        <li>Consequences — what does this constrain in future?</li>
+                    </ul>
+                    <p style="margin-top:8px;font-size:0.9em;color:var(--accent-2);">The act of writing forces clarity. Clarity exposes gaps in reasoning.</p>
+                </div>
+            </div>
+            <div class="footer"><span>Software Architecture with C++ — Ostrowski &amp; Gaczkowski</span><span>38 / 38</span></div>
+        </section>
+
+    </div><!-- .frame -->
+
+</div><!-- .deck -->
+
+<nav class="controls" role="navigation" aria-label="Slide controls">
+    <button id="prevBtn" type="button" disabled aria-label="Previous slide">← Prev</button>
+    <button id="slideNum" type="button" style="min-width:80px;cursor:default;" disabled aria-live="polite">1 / 38</button>
+    <button id="nextBtn" type="button" aria-label="Next slide">Next →</button>
+</nav>
+
+<script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const progress = document.getElementById('progress');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const slideNum = document.getElementById('slideNum');
+    let current = 0;
+
+    function goTo(n) {
+        slides[current].classList.remove('active');
+        current = Math.max(0, Math.min(n, slides.length - 1));
+        slides[current].classList.add('active');
+        const pct = ((current + 1) / slides.length * 100).toFixed(1);
+        progress.style.width = pct + '%';
+        slideNum.textContent = (current + 1) + ' / ' + slides.length;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === slides.length - 1;
+    }
+
+    prevBtn.addEventListener('click', () => goTo(current - 1));
+    nextBtn.addEventListener('click', () => goTo(current + 1));
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+        if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+    });
+
+    // Touch swipe
+    let touchStartX = 0;
+    document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+    document.addEventListener('touchend',   e => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(dx) > 40) dx < 0 ? goTo(current + 1) : goTo(current - 1);
+    });
+
+    // Responsive scaling
+    function rescale() {
+        const frame = document.querySelector('.frame');
+        const fw = 1200, fh = 720;
+        const vw = window.innerWidth  - 64;
+        const vh = window.innerHeight - 80;
+        const scale = Math.min(vw / fw, vh / fh, 1);
+        document.documentElement.style.setProperty('--scale', scale);
+        frame.style.transform = 'scale(' + scale + ')';
+        frame.style.transformOrigin = 'center center';
+    }
+    window.addEventListener('resize', rescale);
+    rescale();
+    goTo(0);
+</script>
+</body>
+</html>
